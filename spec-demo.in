@@ -1,0 +1,538 @@
+\input texinfo    @c -*-texinfo-*-
+%
+% spec-demo.in - main file for the documentation
+%
+%%%%
+
+%------------------------------------------------------------------------------
+%
+%                         NOTE FOR THE UNAWARE USER
+%                         =========================
+%
+%    This file is a texinfo source. It isn't the binary file of some strange
+%    editor of mine. If you want ASCII, you should "make spec-demo.txt".
+%
+%------------------------------------------------------------------------------
+
+%
+% This is not a conventional info file...
+% I use three extra features:
+%   - The '%' as a comment marker, if at beginning of line ("\%" -> "%")
+%   - leading blanks are allowed (this is something I can't live without)
+%   - braces are automatically escaped when they appear in example blocks
+%
+
+@comment %**start of header
+@documentlanguage en
+@documentencoding ISO-8859-1
+@setfilename spec-demo.info
+@settitle spec-demo
+@iftex
+@afourpaper
+@end iftex
+@paragraphindent none
+@comment %**end of header
+
+@setchapternewpage off
+
+@set update-month July 2011
+
+@finalout
+
+@titlepage
+@title Spec Demonstration Package: User Manual
+@subtitle @value{update-month}
+
+@author Document edited for CERN by Alessandro Rubini.
+
+@end titlepage
+@headings single
+
+@c ##########################################################################
+@node Top, Description of the Package, (dir), (dir)
+@top Introduction
+
+This document is the user manual for the demonstration package
+for the SPEC board.  It explains how to install and build all
+the software needed to experience @i{White Rabbit} in your own lab.
+
+Please note that the description here goes to some detail about
+rebuilding the software, but most of it can be skipped in a first
+reading, if you just need to run the demo without making you hands
+dirty.
+
+@menu
+* Description of the Package::  
+* Ethernet Wiring::             
+* Booting The Switch::          
+* Running the Spec::            
+* Summary of Files Used in the Demo::  
+* Rebuilding from source files::  
+* Acknowledgments::             
+@end menu
+
+@c ##########################################################################
+@node Description of the Package, Ethernet Wiring, Top, Top
+@chapter Description of the Package
+
+@i{White Rabbit} is a synchronization system designed as an
+extension of PTP (@i{Precision Time Protocol}). It is able to achieve
+sub-nanosecond accuracy over a multi-level tree of nodes.
+
+SPEC, the @i{Simple PCI-Express Carrier} is a carrier for FMC cards;
+it is able to run the @i{White Rabbit} engine to drive the I/O
+mezzanine cards with accurate time stamps. The SPEC included in the
+demo package is equipped with a 5-channel digital I/O card.
+
+The @i{White Rabbit Switch}, part of the demo package, is a Gigabit
+switch for fiber links using SFP transceivers, running White Rabbit
+as either a master or a slave. In the demo package it is used as
+a master, with the SPEC acting as a slave.
+
+@c ##########################################################################
+@node Ethernet Wiring, Booting The Switch, Description of the Package, Top
+@chapter Ethernet Wiring
+
+To achieve synchronization of the two systems, the asymmetry of
+signalling must be taken care of.  The SPEC and switch should be
+connected with a single-mode fiber. The software shipped for the demo
+package includes configuration settings for this configuration:
+
+@itemize
+@item The @b{violet} SFP transceiver must be plugged in the @code{UP1}
+or @code{UP2} ports of the switch. Fine calibration is not yet
+supported on the other ports.
+
+@item The @b{blue} SFP transceiver must be plugged in the SPEC card
+(which in turn is plugged in a 4-lane PCI-E slot of a GNU/Linux host).
+@end itemize
+
+If you swap the transceivers nothing dramatic is going to happen, but
+the two nodes won't synchronize correctly (the error depends on the length
+of you fiber).
+
+@c ##########################################################################
+@node Booting The Switch, Running the Spec, Ethernet Wiring, Top
+@chapter Booting The Switch
+
+The @i{White Rabbit Switch} runs a GNU/Linux system in the control
+processor, while the WR core is implemented in FPGA. The control
+processor loads the FPGA and runs the WR-PTP protocol.
+
+@menu
+* Booting Options::             
+* Using the Shipped SD card::   
+* Using a New SD Card::         
+* Network Boot::                
+* Connecting to the Switch::    
+@end menu
+
+@c ==========================================================================
+@node Booting Options, Using the Shipped SD card, Booting The Switch, Booting The Switch
+@section Booting Options
+
+To boot the switch, you can use either @i{bootp} and @i{tftp} or the
+micro-SD card.  While network boot is preferred during development,
+we suggest using the SD card to run the demo (the switch is already
+shipped with a card inside).
+
+@c ==========================================================================
+@node Using the Shipped SD card, Using a New SD Card, Booting Options, Booting The Switch
+@section Using the Shipped SD card
+
+When you received the kit, there was a micro-SD card in the switch.
+You'll most likely want ot update it with the archive called
+@code{wrsw-filesystem.tar.gz}. The archive is a 6.5MB tar file and can
+be downloaded from the @i{files} section of the OHWR project. The
+direct link is  @url{FIXME}.
+
+You should remove the top cover of the switch; you'll need to remove
+4 screws, and you can even leave it open during operation.
+The micro-SD card is plugged in a slot within the switch PCB:
+it is marked with a green circle
+in the photograph below:
+@sp 1
+@center @image{sd-card, 10cm}
+@sp 1
+The card has two partitions, you should mount the second partition (which
+is formatted with @i{ext2}) and overwrite it with the @i{tar} file.
+If your system auto-mounted the partition, you need to skip the first
+command and figure what is the mount point that has been created
+(to be used in place of @code{/mnt}).
+
+@example
+   mount /dev/sdb2 /mnt
+   tar -C /mnt xvzf wrsw-filesystem.tar.gz
+   umount /mnt
+@end example
+
+Finally, put the card back in the switch and power it up.
+
+If you just need to run the demo (as opposed to be more involved
+in development) you may jump over the rest of the chapter and go to
+@ref{Running the Spec}.
+
+
+@c ==========================================================================
+@node Using a New SD Card, Network Boot, Using the Shipped SD card, Booting The Switch
+@section Using a New SD Card
+
+If you have the switch and want to use your own card, you need to
+create two partitions in it; the first being a thin @i{fat} and the
+second being @i{ext2}.  The reason for this is that the internal ROM
+of the control CPU can only boot from a @i{fat} partition, which is
+however unusable to host a real Unix system.
+
+Unfortunately, the ROM is quite picky about the layout of the @i{fat}
+filesystem; creating the right filesystem is mainly a matter of luck,
+so Tomasz Wlostowski published an already
+made image of the whole card. Here are his instructions:
+
+@itemize @bullet
+@item Download @url{http://svn.ohwr.org/white-rabbit/trunk/hdl/bin/sdimage.bz2};
+@item Take a microSD card up to 2 GB (it must be a micro-SD card, SDHC cards
+won't work);
+@item Write the image onto the card (as root): @code{bzcat sdimage2.bz2 >
+/dev/YOUR_SD_CARD_DEVICE}. The device is usually @code{/dev/mmcblkX} or
+@code{/dev/sdX}. Note that this is an image of an entire card (not a single partition).
+@item Be careful and don't accidentally erase your hard drive.
+@item Insert the card into the slot on the main board of the switch.
+@end itemize
+
+This tricky stuff ``just works'' and is not going to be cleaned up,
+as V3 of the WR Switch won't use the SD card nor even the same CPU.
+Anyway, if you are interested, complete sources are available at FIXME.
+
+
+@c ==========================================================================
+@node Network Boot, Connecting to the Switch, Using a New SD Card, Booting The Switch
+@section Network Boot
+
+If you are involved in @i{White Rabbit} you'll surely be interested in
+network boot of the switch.  When no SD card is found, the CPU ROM
+boots from an internal flash where a boot loader has been installed
+during production.  So you can just remove the SD card and the system
+will use the usual @i{bootp}/@i{tftp} sequence; please note that you
+need to have the respective servers installed and configured in your
+network.
+
+The network cable being used for boot is the 100Mb interface of the
+control CPU, available as RJ45 on the front panel of the switch (you
+can see a white UTP cable plugged to it in the previous photograph).
+
+The boot loader will download from the net the following files:
+
+@itemize @bullet
+@item @code{uImage} (the kernel image, encapsulated for @i{u-boot};
+@item @code{ramdisk.ext2} (the filesystem; either a compressed @i{ext2}
+image or an @i{initramfs} -- the latter is preferred)
+@end itemize
+
+To run the demo, you'll most likely want to use the same
+@code{wrsw-filesystem.tar.gz} that you would place in the internal SD
+card. To turn the @i{tar} file into an @i{initramfs}, run the
+following commands as root:
+
+@example
+   mkdir untar-fs
+   cd untar-fd
+   tar xzf ../wrsw-filesystem.tar.gz
+   find . -print | cpio -o -H newc | gzip > ../ramdisk.ext2
+@end example
+
+As explained, @i{ramdisk.ext2} is not an @i{ext2} filesystem, but it's the
+name that the boot-loader has been requesting since the initial port.
+
+When booting from the network you'll most likely want to have a serial
+console connected to the device, as described next.
+
+@c ==========================================================================
+@node Connecting to the Switch,  , Network Boot, Booting The Switch
+@section Connecting to the Switch
+
+If you are going to develop with the switch, you'll need to interact
+with its command line. Two channels are available: the serial console
+(for which you need a flat cable and a level converter) and the 100Mb
+network interface.
+
+The control CPU runs an @i{ssh} server, where you can login as
+@code{root} with an empty password -- at least this is the
+configuration in the demo and development setup.
+
+As usual, you'll need to manually confirm you trust the remote system
+when you connect the first time:
+
+@smallexample
+   rudo% ssh root@@192.168.16.224
+   The authenticity of host '192.168.16.224 (192.168.16.224)'
+             can't be established.
+   RSA key fingerprint is b3:19:b8:29:d9:0e:53:4c:c0:55:97:19:ab:2f:92:cc.
+   Are you sure you want to continue connecting (yes/no)? yes
+   Warning: Permanently added '192.168.16.224' (RSA) to the list of known hosts.
+   root@@192.168.16.224's password:
+   # ifconfig | grep wr
+   wrd0      Link encap:Ethernet  HWaddr 02:4A:BC:00:00:00
+   wrd1      Link encap:Ethernet  HWaddr 02:4A:BC:00:00:01
+   wru0      Link encap:Ethernet  HWaddr 02:4A:BC:00:00:20
+   wru1      Link encap:Ethernet  HWaddr 02:4A:BC:00:00:21
+@end smallexample
+
+As you see, the system has configured 4 @i{White Rabbit} ports -- but
+remember to plug your fiber to one of the @i{uplink} ports, as
+explained in @ref{Ethernet Wiring}.
+
+If you have a serial console, you'll see something like the following
+during a successful system boot:
+
+@smallexample
+U-Boot 1.3.4 (Feb 23 2010 - 16:37:22)
+
+DRAM:  64 MB
+NAND:  No NAND device found!!!
+0 MiB
+DataFlash:AT45DB642
+[...]
+TFTP from server 192.168.16.1; our IP address is 192.168.16.245
+Filename 'uImage'.
+Load address: 0x22000000
+Loading: #################################################################
+[...]
+Filename 'ramdisk.ext2'.
+Load address: 0x23000000
+Loading: #################################################################
+[...]
+Linux version 2.6.35 (gcc version 4.4.2 (GCC) ) #1
+[...]
+Starting dropbear sshd: OK
+Starting WR Hardware Abstraction Layer daemon: 
+[...]
+(I) [hal_ports.c:334]    Initializing switch ports
+(I) [hal_ports.c:254]    Initializing port 'wru1' [02:4a:bc:00:00:21]
+(I) [hal_ports.c:283]    Alpha: 0.0002733400 FixAlpha: 75124859
+(I) [hal_ports.c:318]    Port wru1: mode wr_m_and_s
+(I) [hal_ports.c:254]    Initializing port 'wru0' [02:4a:bc:00:00:20]
+(I) [hal_ports.c:283]    Alpha: 0.0002733400 FixAlpha: 75124859
+(I) [hal_ports.c:318]    Port wru0: mode wr_m_and_s
+[...]
+WRPTP.v2 daemon started. HAVE FUN !!! 
+@end smallexample
+
+@c ##########################################################################
+@node Running the Spec, Summary of Files Used in the Demo, Booting The Switch, Top
+@chapter Running the Spec
+
+The SPEC card must be plugged in a 4-lane PCI-Express slot, in a
+GNU/Linux host. It will appear in @i{lspci} as follows:
+
+@example
+   03:00.0 Non-VGA unclassified device: Device 1a39:0004 (rev 01)
+@end example
+
+To run the WR software, you must perform two steps: loading a Linux driver
+in the host OS and then loading the FPGA program through the driver.
+
+The binary includes an LM32 soft-core which runs the embedded WRPTPD
+program and spits diagnostic messages to a serial port.
+
+@menu
+* The Kernel Driver::           
+* The FPGA Binary::             
+* Diagnostic Messages::         
+@end menu
+
+@c ==========================================================================
+@node The Kernel Driver, The FPGA Binary, Running the Spec, Running the Spec
+@section The Kernel Driver
+
+The device driver you need is for the @i{Gennum GN4124} PCIe-to-localbus
+bridge.  The GN name suggested the @i{gnurabbit} name for the package.
+
+Unfortunately, no binary can be shipped for this driver as you need
+to recompile it for the specific kernel version that you are running.
+
+The package, with documentation, can  be downloaded with @i{git}
+from @url{git://gnudd.com/gnurabbit.git}
+or as a @i{tar} file from (FIXME)
+@url{http://www.ohwr.org/attachments/download/324/gnurabbit-2010-08-05.tar.gz}
+
+Follow the instructions to compile it (subdirectory @code{doc}), which
+can be summarized as:
+
+@example
+   export LINUX=/path/to/your-kernel
+   make
+@end example
+
+(Please ignore any errors about documentation: the package relies
+@TeX{} and other packages being available on the host system, but you may
+well not have installed them).
+
+Load the kernel module as superuser:
+
+@example
+   insmod kernel/rawrabbit.ko
+@end example
+
+The driver will try to load a firmware file, but you'll most likely
+won't have it installed, this is correct and you'll see that in the
+kernel messages; loading should succeed in any case.
+The last lines of kernel message after a successful load are the following:
+
+@smallexample
+   rr_loader_complete: called with preempt_cont == 0x00000000
+   rr_loader_complete: current = 2753: firmware/rrabbi
+   rr_loader_complete: no firmware
+@end smallexample
+
+@b{Warning:} you may get an @code{EINVAL} error (i.e. -22) like this:
+
+@example
+   rawrabbit 0000:02:00.0: device not available
+       (can't reserve [mem 0x00000000-0x000fffff 64bit])
+   rawrabbit: probe of 0000:02:00.0 failed with error -22
+   rr_fill_table_and_probe: Warning: no device found
+@end example
+
+The reason for this error is a BIOS (or Linux) failure in enumerating
+the device.  You can verify it by running @code{lspci -v} as
+superuser: a properly enumerated device looks like this:
+
+@example
+   02:00.0 Non-VGA unclassified device: Device 1a39:0004 (rev 01)
+        Subsystem: Device 1a39:0004
+        Flags: bus master, fast devsel, latency 0, IRQ 10
+        Memory at fd300000 (64-bit, non-prefetchable) [size=1M]
+        Memory at fd200000 (64-bit, non-prefetchable) [size=1M]
+        Memory at fd1ff000 (64-bit, non-prefetchable) [size=4K]
+@end example
+
+while a mis-enumerated device will look like this:
+
+@example
+   02:00.0 Non-VGA unclassified device: Device 1a39:0004 (rev 01)
+        Subsystem: Device 1a39:0004
+        Flags: fast devsel
+        Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
+        Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
+        Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
+@end example
+
+If you experience this @code{can't reserve} error, please try moving
+the SPEC to a different slot in your motherboard -- but it may not
+work every time, either. You thought the PC was reliable, did you?
+
+@c ==========================================================================
+@node The FPGA Binary, Diagnostic Messages, The Kernel Driver, Running the Spec
+@section The FPGA Binary
+
+
+The FPGA binary program for the SPEC is currently loaded through
+a user-space program (the kernel space firmware-loader needs to be
+validated after we sort out som other hardware problems).
+
+The @i{bitstream} to be loaded is @code{spec_top.bin}, available from
+@url{http://twlostow.web.cern.ch/twlostow/wrlcd //spec_top.bin}.  You can
+load it to the SPEC with the following commands, from the top-level
+@i{gnurabbit} directory:
+
+@example
+   ./user/loadfile spec_top.bin
+@end example
+
+The command will take up to 3 seconds, and on success the embedded
+WRPTPD will start running in the SPEC itself.
+
+@c ==========================================================================
+@node Diagnostic Messages,  , The FPGA Binary, Running the Spec
+@section Diagnostic Messages
+
+The CPU inside the spec runs an embedded WRPTPD, which spits diagnostic
+messages to its own serial port. The SPEC includes a serial-usb converter,
+so you can plug a mini-usb cable to a USB port of the same computer.
+
+You'll need the @code{cp210x} driver in your host system; this is normally
+shipped as an auto-loaded kernel module by all distributions, but if
+recompiled your own kernel you'll need to add it to the configuration.
+The configuration symbol is @code{CONFIG_USB_SERIAL_CP210X}, enabled
+by @code{CONFIG_USB_SERIAL}.
+
+You can run a communication program at the usual 115200,8N1 configuration
+and see diagnostic messages
+
+A normal run will show the following messages:
+
+FIXME
+
+@c ##########################################################################
+@node Demo Outcome
+@chapter Demo Outcome
+
+FIXME
+
+@i{Nothing works on my office currently, so I can't describe what is
+the expected behaviour}.
+
+FIXME
+
+@c ##########################################################################
+@node Summary of Files Used in the Demo, Rebuilding from source files, Running the Spec, Top
+@chapter Summary of Files Used in the Demo
+
+@c ##########################################################################
+@node Rebuilding from source files, Acknowledgments, Summary of Files Used in the Demo, Top
+@chapter Rebuilding from Source Files
+
+The software being used in the demo is all available as source code,
+with a Free Software license.  Currently, the various components are
+split in several different repositories, as they are being developed by
+different groups of people.
+
+The relevant code and documentation is available from the following
+repositories
+
+@table @i
+
+@item 
+@c FIXME
+
+@c wr-switch-sw
+
+@c ptpd
+
+@c gnurabbit
+
+@end table
+
+
+
+
+@c ##########################################################################
+@node Acknowledgments,  , Rebuilding from source files, Top
+@chapter Acknowledgments
+
+Most of the work related to the demo package has been performed by
+Tomasz Wlostowski with Maciej Lipinski, both in the control group in
+the beams department within CERN (Geneve); and Grzegorz Daniluk of
+Elproma (Warszawa).
+
+The @i{White Rabbit} project is a multi-company multi-lab
+collaboration hosted at @code{ohwr.org}. Many people have been
+involved in designing building and running the SPEC and, in
+particular, the White Rabbit Switch.
+
+
+@c ##########################################################################
+@iftex
+@contents
+@end iftex
+
+@bye
+
+
+
+@c  LocalWords:  Gigabit FPGA bootp tftp filesystem xvzf umount OHWR mmcblkX
+@c  LocalWords:  SDHC microSD bzcat Tomasz Wlostowski ohwr sdimage wrsw WRPTPD
+@c  LocalWords:  lspci Maciej Lipinski Geneve CERN Grzegorz Daniluk Elproma
+@c  LocalWords:  Warszawa iftex ramdisk uImage initramfs mkdir untar cpio newc
+@c  LocalWords:  gzip rudo ifconfig grep encap smallexample HWaddr uplink NAND
+@c  LocalWords:  DataFlash Gennum PCIe localbus gnurabbit gnudd texinfo
