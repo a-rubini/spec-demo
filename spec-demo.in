@@ -40,7 +40,7 @@
 @finalout
 
 @titlepage
-@title Spec Demonstration Package: User Manual
+@title SPEC Demonstration Package: User Manual
 @subtitle @value{update-month}
 
 @author Document edited for CERN by Alessandro Rubini.
@@ -65,7 +65,7 @@ dirty.
 * Description of the Package::  
 * Ethernet Wiring::             
 * Booting The Switch::          
-* Running the Spec::            
+* Running the SPEC::            
 * Demo Results::                
 * Summary of Files Used in the Demo::  
 * Rebuilding from source files::  
@@ -110,10 +110,10 @@ supported on the other ports.
 
 If you swap the transceivers nothing dramatic is going to happen, but
 the two nodes won't synchronize correctly (the error depends on the length
-of you fiber).
+of your fiber).
 
 @c ##########################################################################
-@node Booting The Switch, Running the Spec, Ethernet Wiring, Top
+@node Booting The Switch, Running the SPEC, Ethernet Wiring, Top
 @chapter Booting The Switch
 
 The @i{White Rabbit Switch} runs a GNU/Linux system in the control
@@ -142,11 +142,13 @@ shipped with a card inside).
 @section Using the Shipped SD card
 
 When you received the kit, there was a micro-SD card in the switch.
-You'll most likely want ot update it with the archive called
+You'll most likely want to update it with the archive called
 @code{wrsw-filesystem.tar.gz}. The archive is a 6.5MB tar file and can
 be downloaded from the @i{files} section of the @i{White Rabbit Switch
-Software} OHWR project. The direct link is
-@url{http://www.ohwr.org/attachments/download/675/wrsw-filesystem.tar.gz}.
+Software} OHWR project. The direct link while this is edited is
+@url{http://www.ohwr.org/attachments/download/675/wrsw-filesystem.tar.gz},
+but you may find an updated version in the @i{files} section of the
+OHWR project.
 
 You should remove the top cover of the switch; you'll need to remove
 4 screws, and you can even leave it open during operation.
@@ -172,7 +174,7 @@ Finally, put the card back in the switch and power it up.
 
 If you just need to run the demo (as opposed to be more involved
 in development) you may jump over the rest of the chapter and go to
-@ref{Running the Spec}.
+@ref{Running the SPEC}.
 
 
 @c ==========================================================================
@@ -228,7 +230,7 @@ can see a white UTP cable plugged to it in the previous photograph).
 The boot loader will download from the net the following files:
 
 @itemize @bullet
-@item @code{uImage} (the kernel image, encapsulated for @i{u-boot};
+@item @code{uImage} (the kernel image, encapsulated for @i{u-boot});
 @item @code{ramdisk.ext2} (the filesystem; either a compressed @i{ext2}
 image or an @i{initramfs} -- the latter is preferred)
 @end itemize
@@ -323,8 +325,8 @@ WRPTP.v2 daemon started. HAVE FUN !!!
 @end smallexample
 
 @c ##########################################################################
-@node Running the Spec, Demo Results, Booting The Switch, Top
-@chapter Running the Spec
+@node Running the SPEC, Demo Results, Booting The Switch, Top
+@chapter Running the SPEC
 
 The SPEC card must be plugged in a 4-lane or larger PCI-Express slot, in a
 GNU/Linux host. It will appear in @i{lspci} as follows:
@@ -337,13 +339,13 @@ The exact bus number (here ``@code{03}'' will be different on your host,
 but that's irrelevant.
 
 To run the WR software suite, you must perform two steps: loading a
-Linux driver in the host OS and then loading the FPGA program through
-the driver.  Such a program includes an LM32 soft-core which runs its
+Linux driver in the host OS and then loading the FPGA bitstream through
+the driver.  Such a bitstream includes an LM32 soft-core which runs its
 own embedded WRPTPD executable, which spits diagnostic messages to a serial
 port.
 
 The following image shows the card. The red circle identifies the USB
-connector (the serial port for diagnostics); the yellow circle the
+connector (the serial port for diagnostics); the yellow circle shows the
 jumper I'll refer to in a while.
 
 @sp 1
@@ -357,7 +359,7 @@ jumper I'll refer to in a while.
 @end menu
 
 @c ==========================================================================
-@node The Kernel Driver, The FPGA Binary, Running the Spec, Running the Spec
+@node The Kernel Driver, The FPGA Binary, Running the SPEC, Running the SPEC
 @section The Kernel Driver
 
 The device driver you need is for the @i{Gennum GN4124} PCIe-to-localbus
@@ -380,7 +382,7 @@ can be summarized as:
    make
 @end example
 
-(Please ignore any errors about documentation: the package relies
+(Please ignore any errors about documentation: the package relies on
 @TeX{} and other packages being available on the host system, but you may
 well not have installed them).
 
@@ -390,7 +392,7 @@ Load the kernel module as superuser:
    insmod kernel/rawrabbit.ko
 @end example
 
-The driver will try to load a firmware file, but you'll most likely
+The driver will try to load a firmware file, but you most likely
 won't have it installed, this is correct and you'll see that in the
 kernel messages; loading should succeed in any case.
 The last lines of kernel message after a successful load are the following:
@@ -440,17 +442,18 @@ If you experience this @code{can't reserve} error, you may try to reset
 the Gennum chip by plugging the 2.54mm jumper near the SFP receptacle
 (as marked by the yellow circle in the previous photograph) and booting.
 This jumper forces a sane boot configuration for the Gennum chip. After
-boot, the jumper must be remove before loading the bitstream.
+boot, the jumper must be removed before loading the bitstream.
 
 @c ==========================================================================
-@node The FPGA Binary, Diagnostic Messages, The Kernel Driver, Running the Spec
+@node The FPGA Binary, Diagnostic Messages, The Kernel Driver, Running the SPEC
 @section The FPGA Binary
 
-The FPGA binary program for the SPEC is currently loaded through
+The FPGA binary bitstream for the SPEC is currently loaded through
 a user-space program (the kernel space firmware-loader needs to be
-validated after we sort out som other hardware problems).
+validated after we sort out some other hardware problems).
 
-The @i{bitstream} to be loaded is @code{spec_top.bin}, available from
+The @i{bitstream} to be loaded is @code{spec_top.bin}; the file can be
+downloaded from Tomasz' pages as
 @url{http://twlostow.web.cern.ch/twlostow/wr/spec_top.bin}.  You can
 load it to the SPEC with the following commands, as a superuser running
 from the top-level @i{gnurabbit} directory:
@@ -463,7 +466,7 @@ The command will take up to 3 seconds. After that, the embedded
 WRPTPD will be running in the SPEC itself.
 
 @c ==========================================================================
-@node Diagnostic Messages,  , The FPGA Binary, Running the Spec
+@node Diagnostic Messages,  , The FPGA Binary, Running the SPEC
 @section Diagnostic Messages
 
 The CPU inside the spec runs an embedded WRPTPD, which spits diagnostic
@@ -516,12 +519,12 @@ second. Those with a little exposure with PTP will identify in the
 abstract shown the 4 time stamps used to synchronize the clocks.
 
 @c ##########################################################################
-@node Demo Results, Summary of Files Used in the Demo, Running the Spec, Top
+@node Demo Results, Summary of Files Used in the Demo, Running the SPEC, Top
 @chapter Demo Results
 
 After the two WRPTPD programs (one running on the switch and one
-running on the SPEC card) synchronized, you can verify the accuracy of
-the respective clocks with a scope.
+running on the SPEC card) synchronize, you can measure the offset
+the respective clocks signals with a scope.
 
 On the switch, you should plug a cable to the output labelled ``PPS''
 on the metal case. This is the ``pulse per second'' signal, a positive
@@ -539,7 +542,7 @@ photograph above shows the SPEC with the optical fiber (yellow)
 and PPS cable (brown).
 
 Your scope, then, will show that the two PPS are well aligned, thanks to
-WRPTPD. The following image shows a scope screen-short with an horizontale
+WRPTPD. The following image shows a scope screen-short with a horizontale
 scale of 200ns per square.
 
 @center @image{scope,8cm}
@@ -555,16 +558,20 @@ in your lab.
 @item The White Rabbit Switch, version 2.
 @item A micro-SD card, not from the high-capacity family.
 @item The filesystem for the switch, to be put in the micro-SD or TFTP.
-@item A roll of fiber to connect the switch and the SPEC.
+@item A roll of fiber to connect the switch and the SPEC. This fiber should be
+long enough so that its attenuation guarantees that the optical
+receiver is not overdriven by the optical emitter. The shipped SFP
+modules are relatively powerful because they are meant to drive 10 km
+links. For more information check the specifications on the web.
 @item Two optical SFP transceivers: 1310nm (blue) and 1490nm (violet).
 @item The SPEC with its digital I/O mezzanine board.
 @item A PCI-E PC running a recent kernel version (e.g. 2.6.35, 2.6.39).
 @item The compiler, module utils and @i{minicom} from your distribution.
 @item The @i{gnurabbit} device driver and 
 @item the @code{spec_top.bin} binary file.
-@item An USB to mini-USB cable for to see diagnostic messages.
-@item A coax cable to pick the PPS-OUT from the switch.
-@item A coax cable to pick the PPS-OUT from the SPEC.
+@item An USB to mini-USB cable to see diagnostic messages.
+@item A coax cable to pick the PPS-OUT from the switch (SMC connector).
+@item A coax cable to pick the PPS-OUT from the SPEC I/O mezzanine (LEMO connector).
 @item A scope.
 @end itemize
 
@@ -589,7 +596,9 @@ rebuild effort.
 @item The SD boot temporary solution is at @url{http://twlostow.web.cern.ch/wr/}
 @item The lm32 code base is at @url{git://github.com/twlostow/wr-core-software.git} (refers to WRPTPD during compilation)
 @item The Linux driver is at @url{git://github.com/a-rubini/gnurabbit.git}
-@item This documentation is at @url{git://github.com/a-rubini/spec-demo.git}
+@item The source for this documentation is at @url{git://github.com/a-rubini/spec-demo.git}, while the PDF is released in the @i{files} section of the
+OHWR project
+and released 
 @item The hardware and gateware for the switch is under SVN at @url{http://svn.ohwr.org/white-rabbit}
 @item The hardware and gateware for the SPEC si under SVN at @url{http://svn.ohwr.org/spec}
 the 
@@ -601,7 +610,7 @@ the
 
 Most of the work related to the demo package has been performed by
 Tomasz Wlostowski with Maciej Lipinski, both in the control group in
-the beams department within CERN (Geneve); and Grzegorz Daniluk of
+the beams department within CERN (Gen@`eve); and Grzegorz Daniluk of
 Elproma (Warszawa).
 
 The @i{White Rabbit} project is a multi-company multi-lab
