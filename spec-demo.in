@@ -66,6 +66,7 @@ dirty.
 * Ethernet Wiring::             
 * Booting The Switch::          
 * Running the Spec::            
+* Demo Results::                
 * Summary of Files Used in the Demo::  
 * Rebuilding from source files::  
 * Acknowledgments::             
@@ -143,8 +144,9 @@ shipped with a card inside).
 When you received the kit, there was a micro-SD card in the switch.
 You'll most likely want ot update it with the archive called
 @code{wrsw-filesystem.tar.gz}. The archive is a 6.5MB tar file and can
-be downloaded from the @i{files} section of the OHWR project. The
-direct link is  @url{FIXME}.
+be downloaded from the @i{files} section of the @i{White Rabbit Switch
+Software} OHWR project. The direct link is
+@url{http://www.ohwr.org/attachments/download/675/wrsw-filesystem.tar.gz}.
 
 You should remove the top cover of the switch; you'll need to remove
 4 screws, and you can even leave it open during operation.
@@ -201,7 +203,10 @@ won't work);
 
 This tricky stuff ``just works'' and is not going to be cleaned up,
 as V3 of the WR Switch won't use the SD card nor even the same CPU.
-Anyway, if you are interested, complete sources are available at FIXME.
+Anyway, if you are interested, complete sources are available at
+@url{http://twlostow.web.cern.ch/wr/boot-sd.tar.bz2} (please note it's
+32MB, as the procedure involves a complete @i{barebox} boot loader,
+so the sources of it all are included).
 
 
 @c ==========================================================================
@@ -318,21 +323,32 @@ WRPTP.v2 daemon started. HAVE FUN !!!
 @end smallexample
 
 @c ##########################################################################
-@node Running the Spec, Summary of Files Used in the Demo, Booting The Switch, Top
+@node Running the Spec, Demo Results, Booting The Switch, Top
 @chapter Running the Spec
 
-The SPEC card must be plugged in a 4-lane PCI-Express slot, in a
+The SPEC card must be plugged in a 4-lane or larger PCI-Express slot, in a
 GNU/Linux host. It will appear in @i{lspci} as follows:
 
 @example
    03:00.0 Non-VGA unclassified device: Device 1a39:0004 (rev 01)
 @end example
 
-To run the WR software, you must perform two steps: loading a Linux driver
-in the host OS and then loading the FPGA program through the driver.
+The exact bus number (here ``@code{03}'' will be different on your host,
+but that's irrelevant.
 
-The binary includes an LM32 soft-core which runs the embedded WRPTPD
-program and spits diagnostic messages to a serial port.
+To run the WR software suite, you must perform two steps: loading a
+Linux driver in the host OS and then loading the FPGA program through
+the driver.  Such a program includes an LM32 soft-core which runs its
+own embedded WRPTPD executable, which spits diagnostic messages to a serial
+port.
+
+The following image shows the card. The red circle identifies the USB
+connector (the serial port for diagnostics); the yellow circle the
+jumper I'll refer to in a while.
+
+@sp 1
+@center @image{spec-front, 10cm}
+@sp 1
 
 @menu
 * The Kernel Driver::           
@@ -351,9 +367,10 @@ Unfortunately, no binary can be shipped for this driver as you need
 to recompile it for the specific kernel version that you are running.
 
 The package, with documentation, can  be downloaded with @i{git}
-from @url{git://gnudd.com/gnurabbit.git}
-or as a @i{tar} file from (FIXME)
-@url{http://www.ohwr.org/attachments/download/324/gnurabbit-2010-08-05.tar.gz}
+from @url{git://gnudd.com/gnurabbit.git} or
+@url{git://github.com/a-rubini/gnurabbit.git}, or as
+a @i{tar} file from
+@url{http://www.ohwr.org/attachments/download/673/gnurabbit-2011-07-27.tar.gz}.
 
 Follow the instructions to compile it (subdirectory @code{doc}), which
 can be summarized as:
@@ -384,7 +401,9 @@ The last lines of kernel message after a successful load are the following:
    rr_loader_complete: no firmware
 @end smallexample
 
-@b{Warning:} you may get an @code{EINVAL} error (i.e. -22) like this:
+@b{Warning:} you may get an @code{EINVAL} error (i.e. -22) like shown
+below. If you have no such error, feel free to skip to @ref{The FPGA
+Binary}.
 
 @example
    rawrabbit 0000:02:00.0: device not available
@@ -417,30 +436,31 @@ while a mis-enumerated device will look like this:
         Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
 @end example
 
-If you experience this @code{can't reserve} error, please try moving
-the SPEC to a different slot in your motherboard -- but it may not
-work every time, either. You thought the PC was reliable, did you?
+If you experience this @code{can't reserve} error, you may try to reset
+the Gennum chip by plugging the 2.54mm jumper near the SFP receptacle
+(as marked by the yellow circle in the previous photograph) and booting.
+This jumper forces a sane boot configuration for the Gennum chip. After
+boot, the jumper must be remove before loading the bitstream.
 
 @c ==========================================================================
 @node The FPGA Binary, Diagnostic Messages, The Kernel Driver, Running the Spec
 @section The FPGA Binary
-
 
 The FPGA binary program for the SPEC is currently loaded through
 a user-space program (the kernel space firmware-loader needs to be
 validated after we sort out som other hardware problems).
 
 The @i{bitstream} to be loaded is @code{spec_top.bin}, available from
-@url{http://twlostow.web.cern.ch/twlostow/wrlcd //spec_top.bin}.  You can
-load it to the SPEC with the following commands, from the top-level
-@i{gnurabbit} directory:
+@url{http://twlostow.web.cern.ch/twlostow/wr/spec_top.bin}.  You can
+load it to the SPEC with the following commands, as a superuser running
+from the top-level @i{gnurabbit} directory:
 
 @example
    ./user/loadfile spec_top.bin
 @end example
 
-The command will take up to 3 seconds, and on success the embedded
-WRPTPD will start running in the SPEC itself.
+The command will take up to 3 seconds. After that, the embedded
+WRPTPD will be running in the SPEC itself.
 
 @c ==========================================================================
 @node Diagnostic Messages,  , The FPGA Binary, Running the Spec
@@ -457,26 +477,96 @@ The configuration symbol is @code{CONFIG_USB_SERIAL_CP210X}, enabled
 by @code{CONFIG_USB_SERIAL}.
 
 You can run a communication program at the usual 115200,8N1 configuration
-and see diagnostic messages
+and see diagnostic messages. Please note that no message appears
+before the link on the fiber is detected. 
 
 A normal run will show the following messages:
 
-FIXME
+@example
+   LINK UP
+   [softpll]: enabled
+   [softpll]: enabled
+   [softpll]: got lock
+   TX fixed delay = 30332
+
+   Deltas: txm 20763 rxm 12586 txs 0 rxs 245000
+   ->t1 = 1285700985:674718192:0
+   ->t2 = 117:132081904:1608
+   ->t3 = 117:296100472:0
+   ->t4 = 1285700985:838845184:4233
+   ->mdelay = 0:0:0
+   ->HWOffset = 1285700868:542690624:1390
+   ADJ: utc 1285700868 seconds
+   ->t1 = 1285700986:734721264:0
+   ->t2 = 1285700986:192084976:1603
+   ->t3 = 1285700986:353203512:0
+   ->t4 = 1285700986:895948224:4242
+   ->mdelay = 0:108425:4841
+   [...]
+   ->t1 = 1285701007:934628080:0
+   ->t2 = 1285701007:934682416:3020
+   ->t3 = 1285701008:141120312:0
+   ->t4 = 1285701008:141174400:2870
+   ->mdelay = 0:108425:4892
+   ->HWOffset = 0:0:2
+@end example
+
+The last stanza shown, the one after @code{[...]} is repeated every
+second. Those with a little exposure with PTP will identify in the
+abstract shown the 4 time stamps used to synchronize the clocks.
 
 @c ##########################################################################
-@node Demo Outcome
-@chapter Demo Outcome
+@node Demo Results, Summary of Files Used in the Demo, Running the Spec, Top
+@chapter Demo Results
 
-FIXME
+After the two WRPTPD programs (one running on the switch and one
+running on the SPEC card) synchronized, you can verify the accuracy of
+the respective clocks with a scope.
 
-@i{Nothing works on my office currently, so I can't describe what is
-the expected behaviour}.
+On the switch, you should plug a cable to the output labelled ``PPS''
+on the metal case. This is the ``pulse per second'' signal, a positive
+pulse lasting 800us at the beginning of each TAI (or UTC) second -- in
+this case we are using no external master clock, so it will be a local
+reference disconnected from reality.@footnote{The careful reader will
+have noticed that the UART messages shown refer to September 28th 2010,
+when the SPEC didn't yet exist.}
 
-FIXME
+@center @image{spec-outside,5cm}
+
+On the SPEC, a similar PPS signal is output on the first digital
+output channel, which you can look at by plugging a cable. The
+photograph above shows the SPEC with the optical fiber (yellow)
+and PPS cable (brown).
+
+Your scope, then, will show that the two PPS are well aligned, thanks to
+WRPTPD. The following image shows a scope screen-short with an horizontale
+scale of 200ns per square.
+
+@center @image{scope,8cm}
 
 @c ##########################################################################
-@node Summary of Files Used in the Demo, Rebuilding from source files, Running the Spec, Top
-@chapter Summary of Files Used in the Demo
+@node Summary of Files Used in the Demo, Rebuilding from source files, Demo Results, Top
+@chapter Summary of Sofware and Hardware
+
+This is the complete list of data and material you need to run the demo
+in your lab.
+
+@itemize @bullet
+@item The White Rabbit Switch, version 2.
+@item A micro-SD card, not from the high-capacity family.
+@item The filesystem for the switch, to be put in the micro-SD or TFTP.
+@item A roll of fiber to connect the switch and the SPEC.
+@item Two optical SFP transceivers: 1310nm (blue) and 1490nm (violet).
+@item The SPEC with its digital I/O mezzanine board.
+@item A PCI-E PC running a recent kernel version (e.g. 2.6.35, 2.6.39).
+@item The compiler, module utils and @i{minicom} from your distribution.
+@item The @i{gnurabbit} device driver and 
+@item the @code{spec_top.bin} binary file.
+@item An USB to mini-USB cable for to see diagnostic messages.
+@item A coax cable to pick the PPS-OUT from the switch.
+@item A coax cable to pick the PPS-OUT from the SPEC.
+@item A scope.
+@end itemize
 
 @c ##########################################################################
 @node Rebuilding from source files, Acknowledgments, Summary of Files Used in the Demo, Top
@@ -484,27 +574,26 @@ FIXME
 
 The software being used in the demo is all available as source code,
 with a Free Software license.  Currently, the various components are
-split in several different repositories, as they are being developed by
-different groups of people.
+split in several different repositories, as they are being developed
+by different groups of people, the situation is still somewhat in flux
+toward a more consolidated setup.
 
 The relevant code and documentation is available from the following
-repositories
+repositories, but please check for newer versions of this document at
+@url{http://www.ohwr.org/projects/pfc-sw/files/} before starting a
+rebuild effort.
 
-@table @i
-
-@item 
-@c FIXME
-
-@c wr-switch-sw
-
-@c ptpd
-
-@c gnurabbit
-
-@end table
-
-
-
+@itemize @bullet
+@item WRPTPD is currently hosted at @url{git://gnudd.com/ptp-noposix.git}
+@item The software for the switch is at @url{git://ohwr.org/white-rabbit/wr-switch-sw.git} (refers to WRPTPD during compilation)
+@item The SD boot temporary solution is at @url{http://twlostow.web.cern.ch/wr/}
+@item The lm32 code base is at @url{git://github.com/twlostow/wr-core-software.git} (refers to WRPTPD during compilation)
+@item The Linux driver is at @url{git://github.com/a-rubini/gnurabbit.git}
+@item This documentation is at @url{git://github.com/a-rubini/spec-demo.git}
+@item The hardware and gateware for the switch is under SVN at @url{http://svn.ohwr.org/white-rabbit}
+@item The hardware and gateware for the SPEC si under SVN at @url{http://svn.ohwr.org/spec}
+the 
+@end itemize
 
 @c ##########################################################################
 @node Acknowledgments,  , Rebuilding from source files, Top
@@ -535,4 +624,5 @@ particular, the White Rabbit Switch.
 @c  LocalWords:  lspci Maciej Lipinski Geneve CERN Grzegorz Daniluk Elproma
 @c  LocalWords:  Warszawa iftex ramdisk uImage initramfs mkdir untar cpio newc
 @c  LocalWords:  gzip rudo ifconfig grep encap smallexample HWaddr uplink NAND
-@c  LocalWords:  DataFlash Gennum PCIe localbus gnurabbit gnudd texinfo
+@c  LocalWords:  DataFlash Gennum PCIe localbus gnurabbit gnudd texinfo barebox
+@c  LocalWords:  rawrabbit insmod cont BIOS prefetchable bitstream twlostow
