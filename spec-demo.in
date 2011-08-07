@@ -67,8 +67,9 @@ dirty.
 * Booting The Switch::          
 * Running the SPEC::            
 * Demo Results::                
+* Troubleshooting::             
 * Summary of Files Used in the Demo::  
-* Rebuilding from source files::  
+* Rebuilding from Source files::  
 * Acknowledgments::             
 @end menu
 
@@ -265,6 +266,12 @@ network interface.
 The control CPU runs an @i{ssh} server, where you can login as
 @code{root} with an empty password -- at least this is the
 configuration in the demo and development setup.
+
+Please note that the switch asks for an IP addres through DHCP, so the
+address being shown in the example below belongs to my local LAN
+address range; missing a serial port, you can retrieve the IP address
+from the log files in your DHCP server. It's worth noting that V3
+of the switch will have an easily accessible UART port.
 
 As usual, you'll need to manually confirm you trust the remote system
 when you connect the first time:
@@ -519,7 +526,7 @@ second. Those with a little exposure with PTP will identify in the
 abstract shown the 4 time stamps used to synchronize the clocks.
 
 @c ##########################################################################
-@node Demo Results, Summary of Files Used in the Demo, Running the SPEC, Top
+@node Demo Results, Troubleshooting, Running the SPEC, Top
 @chapter Demo Results
 
 After the two WRPTPD programs (one running on the switch and one
@@ -548,7 +555,109 @@ scale of 200ns per square.
 @center @image{scope,8cm}
 
 @c ##########################################################################
-@node Summary of Files Used in the Demo, Rebuilding from source files, Demo Results, Top
+@node Troubleshooting, Summary of Files Used in the Demo, Demo Results, Top
+@chapter Troubleshooting
+
+As in every demo, something may go wrong. These are some suggestions that
+may (or may not) help finding and fixing the issue you are facing.
+
+@menu
+* Check the Fiber and Transceivers::  
+* Replace the LM32 Program::    
+* Stick to Precompiled Binaries::  
+@end menu
+
+@c ==========================================================================
+@node Check the Fiber and Transceivers, Replace the LM32 Program, Troubleshooting, Troubleshooting
+@section Check the Fiber and Transceivers
+
+If the SPEC gives no sign of life, maybe it's because no network link
+is detected.  If the fiber is too short, the link may not established
+because the optical transceivers are saturated.
+
+You may need to get a longe fiber or make a few knots (1cm in
+diameter: not less or the fiber may break) to increase attenuation.
+
+In any case, you can always verify if the optical part of the system
+works by connecting ports UP0 and UP1 of the switch, using the same
+fibers and the same transceivers you'd use to talk with the SPEC.
+
+If the system works, you'll see the ``@code{Link up}'' messages in the
+kernel messages of the switch (for example, run ``@code{cat
+/proc/kmesg | grep ink}'' in one of your @i{ssh} sessions).
+
+If no @i{link up} message shows, then the problem lies in the optical
+part of the link. If the loopback connection works, you can count on it
+working towards the SPEC as well.
+
+@c ==========================================================================
+@node Replace the LM32 Program, Stick to Precompiled Binaries, Check the Fiber and Transceivers, Troubleshooting
+@section Replace the LM32 Program
+
+The program that is part of the shipped @code{spec_top.bin} is silent
+until the link goes up.  So even if you look at the USB-serial port of
+the SPEC, you won't know whether or not the FPGA has been properly
+programmed.  This is a bug on our side, that will be fixed in a later
+release.
+
+If the FPGA is properly programmed, you can replace the LM32 program
+without doing complete FPGA reprogramming.  The
+@code{wr-core-software} repository (@ref{Rebuilding from Source Files}
+includes a re-loader wich simply puts the soft-core in reset and
+replaces it's RAM image before releasing the reset signal.  The
+program is called @code{zpu-loader} because initially the spec was
+running a ZPU soft core.  To build it, just get the repository and
+compile the tools
+
+@example
+    make -C tools
+@end example
+
+@noindent
+If you load the file @code{wrc-verbose.bin} (committed as part of this
+@i{spec-demo} source package, you'll get a much more verbose version
+of the SPEC, but even if no link is there these messages will appear
+in the serial console:
+
+@example
+    ptpd_netif_init
+    ptpd_netif_extsrc_detection
+    ptpd_netif_create_socket
+    read_phase_val
+    ptpd_netif_get_hw_addr
+    after state=3, wrState=9
+@end example
+
+@noindent
+To send the new binary to the SPEC you can do like this:
+
+@example
+    ~/wr-core-software-tools/zpu-loader ~/spec-demo/wrc-verbose.bin
+@end example
+
+@c ==========================================================================
+@node Stick to Precompiled Binaries,  , Replace the LM32 Program, Troubleshooting
+@section Stick to Precompiled Binaries
+
+This all of this is free software and you can rebuild everything from
+sources (see @ref{Rebuilding from Source Files} for a complete list of
+related repositories) there may be some minor but details that are not
+immediately grasped. On the other hand, it may happen that the demo is
+not compiled from the @i{master} branch of the repository.
+
+Therefore, before you try running your remopiled binaries, whether on
+the switch or on the SPEC, you'd better ensured the shipped binaries
+work at your site.  If they do, then we can help in sorting out what
+is going differently in your recompiled binaries.
+
+Please remember this is a demo and the project is still under
+development; moreover, this is vacation time in most of Europe so
+thinkgs won't change much in the next month.
+
+
+
+@c ##########################################################################
+@node Summary of Files Used in the Demo, Rebuilding from Source files, Troubleshooting, Top
 @chapter Summary of Sofware and Hardware
 
 This is the complete list of data and material you need to run the demo
@@ -576,7 +685,7 @@ links. For more information check the specifications on the web.
 @end itemize
 
 @c ##########################################################################
-@node Rebuilding from source files, Acknowledgments, Summary of Files Used in the Demo, Top
+@node Rebuilding from Source Files, Acknowledgments, Summary of Files Used in the Demo, Top
 @chapter Rebuilding from Source Files
 
 The software being used in the demo is all available as source code,
@@ -591,21 +700,38 @@ repositories, but please check for newer versions of this document at
 rebuild effort.
 
 @itemize @bullet
+
 @item WRPTPD is currently hosted at @url{git://gnudd.com/ptp-noposix.git}
-@item The software for the switch is at @url{git://ohwr.org/white-rabbit/wr-switch-sw.git} (refers to WRPTPD during compilation)
+
+@item The software for the switch
+is at @url{git://ohwr.org/white-rabbit/wr-switch-sw.git} (refers to
+WRPTPD during compilation)
+
 @item The SD boot temporary solution is at @url{http://twlostow.web.cern.ch/wr/}
-@item The lm32 code base is at @url{git://github.com/twlostow/wr-core-software.git} (refers to WRPTPD during compilation)
+
+@item The lm32 code base
+is at @url{git://github.com/twlostow/wr-core-software.git} (refers to
+WRPTPD during compilation)
+
 @item The Linux driver is at @url{git://github.com/a-rubini/gnurabbit.git}
-@item The source for this documentation is at @url{git://github.com/a-rubini/spec-demo.git}, while the PDF is released in the @i{files} section of the
-OHWR project
-and released 
-@item The hardware and gateware for the switch is under SVN at @url{http://svn.ohwr.org/white-rabbit}
-@item The hardware and gateware for the SPEC si under SVN at @url{http://svn.ohwr.org/spec}
-the 
+
+@item The source for this documentation is at
+@url{git://github.com/a-rubini/spec-demo.git}; a precompiled PDF is
+released in the @i{files} section of the OHWR project
+
+@item The hardware and gateware for the switch is
+under SVN at @url{http://svn.ohwr.org/white-rabbit}
+
+@item The hardware and gateware for the SPEC is under git at
+@url{git://ohwr.org/hdl-core-lib/wr-cores.git}
+
+@item Documentation about the SPEC is
+under SVN at @url{http://svn.ohwr.org/spec}
+
 @end itemize
 
 @c ##########################################################################
-@node Acknowledgments,  , Rebuilding from source files, Top
+@node Acknowledgments,  , Rebuilding from Source files, Top
 @chapter Acknowledgments
 
 Most of the work related to the demo package has been performed by
