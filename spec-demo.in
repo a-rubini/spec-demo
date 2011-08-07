@@ -100,8 +100,8 @@ connected with a single-mode fiber. The software shipped for the demo
 package includes configuration settings for this configuration:
 
 @itemize
-@item The @b{violet} SFP transceiver must be plugged in the @code{UP1}
-or @code{UP2} ports of the switch. Fine calibration is not yet
+@item The @b{violet} SFP transceiver must be plugged in the @code{UP0}
+or @code{UP1} ports of the switch. Fine calibration is not yet
 supported on the other ports.
 
 @item The @b{blue} SFP transceiver must be plugged in the SPEC card
@@ -166,7 +166,7 @@ command and figure what is the mount point that has been created
 
 @example
    mount /dev/sdb2 /mnt
-   tar -C /mnt xvzf wrsw-filesystem.tar.gz
+   tar -C /mnt -xvzf wrsw-filesystem.tar.gz
    umount /mnt
 @end example
 
@@ -242,8 +242,8 @@ following commands as root:
 
 @example
    mkdir untar-fs
-   cd untar-fd
-   tar xzf ../wrsw-filesystem.tar.gz
+   cd untar-fs
+   tar -xzf ../wrsw-filesystem.tar.gz
    find . -print | cpio -o -H newc | gzip > ../ramdisk.ext2
 @end example
 
