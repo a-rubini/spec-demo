@@ -148,12 +148,13 @@ shipped with a card inside).
 
 When you received the kit, there was a micro-SD card in the switch.
 You'll most likely want to update it with the archive called
-@code{wrsw-filesystem.tar.gz}. The archive is a 6.5MB tar file and can
+@code{wrsw-filesystem.tar.gz}. The archive is a 4.5MB tar file and can
 be downloaded from the @i{files} section of the @i{White Rabbit Switch
 Software} OHWR project. The direct link while this is edited is
-@url{http://www.ohwr.org/attachments/download/675/wrsw-filesystem.tar.gz},
+@url{http://www.ohwr.org/attachments/download/717/wrsw-filesystem.tar.gz},
 but you may find an updated version in the @i{files} section of the
-OHWR project.
+OHWR project. [@b{Note:} This isn't the same binary you used with previous
+versions of this manual].
 
 You should remove the top cover of the switch; you'll need to remove
 4 screws, and you can even leave it open during operation.
@@ -165,7 +166,7 @@ in the photograph below:
 @sp 1
 The card has two partitions, you should mount the second partition (which
 is formatted with @i{ext2}) and overwrite it with the @i{tar} file.
-If your system auto-mounted the partition, you need to skip the first
+If your host system auto-mounted the partition, you need to skip the first
 command and figure what is the mount point that has been created
 (to be used in place of @code{/mnt}).
 
@@ -203,8 +204,11 @@ made image of the whole card. Here are his instructions:
 won't work);
 @item Write the image onto the card (as root): @code{bzcat sdimage2.bz2 >
 /dev/YOUR_SD_CARD_DEVICE}. The device is usually @code{/dev/mmcblkX} or
-@code{/dev/sdX}. Note that this is an image of an entire card (not a single partition).
+@code{/dev/sdX}, for some @code{X}.
+Note that this is an image of an entire card (not a single partition).
 @item Be careful and don't accidentally erase your hard drive.
+@item Update the card with @code{wrsw-filesystem.tar.gz}
+(see @ref{Using the Shipped SD card}).
 @item Insert the card into the slot on the main board of the switch.
 @end itemize
 
@@ -383,7 +387,7 @@ The package, with documentation, can  be downloaded with @i{git}
 from @url{git://gnudd.com/gnurabbit.git} or
 @url{git://github.com/a-rubini/gnurabbit.git}, or as
 a @i{tar} file from
-@url{http://www.ohwr.org/attachments/download/673/gnurabbit-2011-07-27.tar.gz}.
+@url{http://www.ohwr.org/attachments/download/16/gnurabbit-2011-09-01.tar.gz}.
 
 Follow the instructions to compile it (subdirectory @code{doc}), which
 can be summarized as:
@@ -395,86 +399,85 @@ can be summarized as:
 
 (Please ignore any errors about documentation: the package relies on
 @TeX{} and other packages being available on the host system, but you may
-well not have installed them).
+well not have installed them; also there's a known warning in the code about
+an unused function, it's not an issue at all for you -- it is for me).
 
-Load the kernel module as superuser:
+Load the kernel module as superuser. The module is called @code{spec-demo.ko}
+as it is specifically designed for the SPEC, but the final SPEC driver
+will be different.  Previous versions of this document referred to
+the generic @code{rawrabbit.ko} driver; the old procedure is still
+working but this driver is easier to use.
 
 @example
-   insmod kernel/rawrabbit.ko
+   insmod kernel/spec-demo.ko
 @end example
 
-The driver will try to load a firmware file, but you most likely
-won't have it installed, this is correct and you'll see that in the
-kernel messages; loading should succeed in any case.
-The last lines of kernel message after a successful load are the following:
+Actually, before loading the module, you may want to place the two
+binary files for the SPEC in @i{/lib/firmware}.  You'll need
+@code{spec_top.bin} and @code{wrc.bin}.  Both can be downloaded from
+Tom's personal space:
+
+@example
+http://twlostow.web.cern.ch/twlostow/wr-firmware-20110824/
+@end example
+
+A copy of those binaries is available in the @i{files} section of the
+@i{spec-sw} project in OHWR:
+
+@example
+   http://www.ohwr.org/projects/spec-sw/files
+@end example
+
+As of this writing, the direct links are as follows, but please
+note that newer files may be there by the time you read this:
+
+@example
+   http://www.ohwr.org/attachments/download/718/spec_top.bin
+   http://www.ohwr.org/attachments/download/719/wrc.bin
+@end example
+
+With the two files under @i{/lib/firmware}, you can load
+the module. Your kernel messages (on the host) will look like the
+following:
 
 @smallexample
-   rr_loader_complete: called with preempt_cont == 0x00000000
-   rr_loader_complete: current = 2753: firmware/rrabbi
-   rr_loader_complete: no firmware
+   [22300.886172] request firmware "spec_top.bin": 0 (Success)
+   [22300.892432] rr_loader_complete: got firmware file, 1484404 (0x16a674) bytes
+   [22301.090518] __rr_gennum_load: done after 371101 writes
+   [22301.095990] request program "wrc.bin": 0 (Success)
+   [22301.099923] spec_loader_complete: got program file, 49044 (0xbf94) bytes
+   [22301.101416] LM32 has been restarted
 @end smallexample
 
-@b{Warning:} you may get an @code{EINVAL} error (i.e. -22) like shown
-below. If you have no such error, feel free to skip to @ref{The FPGA
-Binary}.
+@b{Note:} while @i{/lib/firmware} is most likely the correct directory
+to place your firmware in, the actual name on your host system may be
+different according to how your GNU/Linux distribution is configured.
 
-@example
-   rawrabbit 0000:02:00.0: device not available
-       (can't reserve [mem 0x00000000-0x000fffff 64bit])
-   rawrabbit: probe of 0000:02:00.0 failed with error -22
-   rr_fill_table_and_probe: Warning: no device found
-@end example
+More information about the kernel module is in the manual for
+@i{gnurabbit}, at @code{git://gnudd.com/gnurabbit.git} or
+@code{git://github.com/a-rubini/gnurabbit.git}. The current version
+is available both as source archive and precompiled PDF for the manual
+at @i{ohwr.org}:
 
-The reason for this error is a BIOS (or Linux) failure in enumerating
-the device.  You can verify it by running @code{lspci -v} as
-superuser: a properly enumerated device looks like this:
+@smallexample
+     http://www.ohwr.org/attachments/715/gnurabbit-2011-09-01.pdf
+     http://www.ohwr.org/attachments/download/716/gnurabbit-2011-09-01.tar.gz
+@end smallexample
 
-@example
-   02:00.0 Non-VGA unclassified device: Device 1a39:0004 (rev 01)
-        Subsystem: Device 1a39:0004
-        Flags: bus master, fast devsel, latency 0, IRQ 10
-        Memory at fd300000 (64-bit, non-prefetchable) [size=1M]
-        Memory at fd200000 (64-bit, non-prefetchable) [size=1M]
-        Memory at fd1ff000 (64-bit, non-prefetchable) [size=4K]
-@end example
-
-while a mis-enumerated device will look like this:
-
-@example
-   02:00.0 Non-VGA unclassified device: Device 1a39:0004 (rev 01)
-        Subsystem: Device 1a39:0004
-        Flags: fast devsel
-        Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
-        Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
-        Memory at <unassigned> (64-bit, non-prefetchable) [disabled]
-@end example
-
-If you experience this @code{can't reserve} error, you may try to reset
-the Gennum chip by plugging the 2.54mm jumper near the SFP receptacle
-(as marked by the yellow circle in the previous photograph) and booting.
-This jumper forces a sane boot configuration for the Gennum chip. After
-boot, the jumper must be removed before loading the bitstream.
 
 @c ==========================================================================
 @node The FPGA Binary, Diagnostic Messages, The Kernel Driver, Running the SPEC
 @section The FPGA Binary
 
-The FPGA binary bitstream for the SPEC is currently loaded through
-a user-space program (the kernel space firmware-loader needs to be
-validated after we sort out some other hardware problems).
-
-The @i{bitstream} to be loaded is @code{spec_top.bin}; the file can be
-downloaded from Tomasz' pages as
-@url{http://twlostow.web.cern.ch/twlostow/wr/spec_top.bin}.  You can
-load it to the SPEC with the following commands, as a superuser running
-from the top-level @i{gnurabbit} directory:
+The FPGA binary bitstream for the SPEC is loaded directly by
+the kernel module. If you recompile the VHDL code you'll need to place
+the new binary in @i{/lib/firmware} and re-load the module:
 
 @example
-   ./user/loadfile spec_top.bin
+   cd /path/to/gnurabbit
+   rmmod spec-demo
+   insmod kernel/spec-demo.ko
 @end example
-
-The command will take up to 3 seconds. After that, the embedded
-WRPTPD will be running in the SPEC itself.
 
 @c ==========================================================================
 @node Diagnostic Messages,  , The FPGA Binary, Running the SPEC
@@ -496,38 +499,75 @@ before the link on the fiber is detected.
 
 A normal run will show the following messages:
 
-@example
-   LINK UP
-   [softpll]: enabled
-   [softpll]: enabled
-   [softpll]: got lock
-   TX fixed delay = 30332
+@smallexample
+wr_core: starting up (press G to launch the GUI and D for extra debug messages).
+...
+Deltas: txm 20784 rxm 13410 txs 0 rxs 231200
+->t1 = 1285702848:777016328:0
+->t2 = 106:28276976:1642
+->t3 = 106:214910952:0
+->t4 = 1285702848:963758728:2614
+->mdelay = 0:0:0
+->HWOffset = 1285702742:748793680:1263
+[...]
+->t1 = 1285702877:396933896:0
+->t2 = 1285702877:396988224:2915
+->t3 = 1285702877:647817304:0
+->t4 = 1285702877:647871400:1367
+->mdelay = 0:108425:3276
+->HWOffset = 0:0:3
+@end smallexample
 
-   Deltas: txm 20763 rxm 12586 txs 0 rxs 245000
-   ->t1 = 1285700985:674718192:0
-   ->t2 = 117:132081904:1608
-   ->t3 = 117:296100472:0
-   ->t4 = 1285700985:838845184:4233
-   ->mdelay = 0:0:0
-   ->HWOffset = 1285700868:542690624:1390
-   ADJ: utc 1285700868 seconds
-   ->t1 = 1285700986:734721264:0
-   ->t2 = 1285700986:192084976:1603
-   ->t3 = 1285700986:353203512:0
-   ->t4 = 1285700986:895948224:4242
-   ->mdelay = 0:108425:4841
-   [...]
-   ->t1 = 1285701007:934628080:0
-   ->t2 = 1285701007:934682416:3020
-   ->t3 = 1285701008:141120312:0
-   ->t4 = 1285701008:141174400:2870
-   ->mdelay = 0:108425:4892
-   ->HWOffset = 0:0:2
-@end example
+The readers with a little exposure with PTP will identify in the abstract
+above the 4 time stamps used to synchronize the clocks.
 
-The last stanza shown, the one after @code{[...]} is repeated every
-second. Those with a little exposure with PTP will identify in the
-abstract shown the 4 time stamps used to synchronize the clocks.
+All times here are in the form
+``@code{@i{seconds}:@i{nanoseconds}:@i{picoseconds}}'' where
+@i{nanoseconds} is a multiple of 8ns (i.e., an integer count of
+the 125MHz clock) and @i{picoseconds} is in the range 0-8000 (with some
+jitter to nearby values outside the interval).
+
+The 6 lines from @code{t1=} to @code{HWOffset} are repeated every second.
+As you see above, the first instance referred the the system right
+after boot, not synchronized, while the next (after the dots) shows a
+synchnonized system.
+
+This console interface reads the UART as well: as the first line claims,
+if you type @code{d} you'll get more information and if you type @code{g}
+you'll get a ``GUI'' (made with escape sequences to have a full-screen
+ASCII status window).
+
+The ``GUI'' status window is like the following one (please note that
+it doesn't fit into the standard 80x25 terminal, you'll need to enlarge
+your @i{minicom} terminal window):
+
+@smallexample
+WR PTP Core Sync Monitor v 0.2
+g = exit, t = enable/disable phase tracking, +/- = increase/decrease phase by 100ps
+
+Link status:
+
+wru1: Link up   (RX: 5476, TX: 1730), mode: WR Slave   Locked  Calibrated
+
+Synchronization status:
+
+Servo state:               TRACK_PHASE
+Phase tracking:            ON
+Synchronization source:    wru1
+
+Timing parameters:
+
+Round-trip time (mu):      108428305 ps
+Master-slave delay:        54330929 ps
+Master PHY delays:         TX: 20784 ps, RX: 13410 ps
+Slave PHY delays:          TX: 0 ps, RX: 231200 ps
+Total link asymmetry:      -233553 ps
+Clock offset:              -6 ps
+Phase setpoint:            1281 ps
+Skew:                      10 ps
+Manual phase adjustment:   0 ps
+@end smallexample
+
 
 @c ##########################################################################
 @node Demo Results, Troubleshooting, Running the SPEC, Top
@@ -575,82 +615,47 @@ may (or may not) help finding and fixing the issue you are facing.
 @node Check the Fiber and Transceivers, Replace the LM32 Program, Troubleshooting, Troubleshooting
 @section Check the Fiber and Transceivers
 
-If the SPEC gives no sign of life, maybe it's because no network link
-is detected.  If the fiber is too short, the link may not established
-because the optical transceivers are saturated.
+If the SPEC gives no sign of life, there have been issues in programming
+the FPGA.  Older versions of @code{wrc.bin} didn't report anything on the
+serial port before the optical link went up, but this is no longer the
+case.
 
-You may need to get a longe fiber or make a few knots (1cm in
+If the optical link is down, you'll see no green led on the SPEC (the
+red led is always on to mean ``I'm alive'', the green led is used to
+report the link status. Also, the GUI will say ``@code{wru1: Link
+down}''.  This may happen because your your fiber
+is too short, the link is not established if
+the optical transceivers are saturated. In this case
+you may need to get a longe fiber or make a few knots (1cm in
 diameter: not less or the fiber may break) to increase attenuation.
-
-In any case, you can always verify if the optical part of the system
-works by connecting ports UP0 and UP1 of the switch, using the same
-fibers and the same transceivers you'd use to talk with the SPEC.
-
-If the system works, you'll see the ``@code{Link up}'' messages in the
-kernel messages of the switch (for example, run ``@code{cat
-/proc/kmesg | grep ink}'' in one of your @i{ssh} sessions).
-
-If no @i{link up} message shows, then the problem lies in the optical
-part of the link. If the loopback connection works, you can count on it
-working towards the SPEC as well.
 
 @c ==========================================================================
 @node Replace the LM32 Program, Stick to Precompiled Binaries, Check the Fiber and Transceivers, Troubleshooting
 @section Replace the LM32 Program
 
-The program that is part of the shipped @code{spec_top.bin} is silent
-until the link goes up.  So even if you look at the USB-serial port of
-the SPEC, you won't know whether or not the FPGA has been properly
-programmed.  This is a bug on our side, that will be fixed in a later
-release.
-
 If the FPGA is properly programmed, you can replace the LM32 program
-without doing complete FPGA reprogramming.  The
-@code{wr-core-software} repository (@ref{Rebuilding from Source Files}
-includes a re-loader wich simply puts the soft-core in reset and
-replaces it's RAM image before releasing the reset signal.  The
-program is called @code{zpu-loader} because initially the spec was
-running a ZPU soft core.  To build it, just get the repository and
-compile the tools
+without doing complete FPGA reprogramming.  You can reload @code{spec-demo.ko}
+with the parameter @code{fwname=none}, so only the @code{wrc.bin} is loaded,
+without a complete reprogramming of the FPGA.  As an alternative,
+you can use the user-space loader part of @i{gnurabbit}.
 
-@example
-    make -C tools
-@end example
-
-@noindent
-If you load the file @code{wrc-verbose.bin} (committed as part of this
-@i{spec-demo} source package, you'll get a much more verbose version
-of the SPEC, but even if no link is there these messages will appear
-in the serial console:
-
-@example
-    ptpd_netif_init
-    ptpd_netif_extsrc_detection
-    ptpd_netif_create_socket
-    read_phase_val
-    ptpd_netif_get_hw_addr
-    after state=3, wrState=9
-@end example
-
-@noindent
-To send the new binary to the SPEC you can do like this:
-
-@example
-    ~/wr-core-software-tools/zpu-loader ~/spec-demo/wrc-verbose.bin
-@end example
+For more details on both options, see the @i{gnurabbit} manual.
 
 @c ==========================================================================
 @node Stick to Precompiled Binaries,  , Replace the LM32 Program, Troubleshooting
 @section Stick to Precompiled Binaries
 
-This all of this is free software and you can rebuild everything from
+While all of this is free software and you can rebuild everything from
 sources (see @ref{Rebuilding from Source Files} for a complete list of
-related repositories) there may be some minor but details that are not
-immediately grasped. On the other hand, it may happen that the demo is
-not compiled from the @i{master} branch of the repository.
+related repositories), there may be some minor but details that are not
+immediately grasped.
 
-Therefore, before you try running your remopiled binaries, whether on
-the switch or on the SPEC, you'd better ensured the shipped binaries
+On the other hand, it may happen that the demo is not compiled from
+the @i{master} branch of the repository -- at time of writing, this
+happens for the @i{ptp} code, see @ref{Rebuilding from Source Files}.
+
+Therefore, before you try running your recompiled binaries, whether on
+the switch or on the SPEC, you'd better ensure the shipped binaries
 work at your site.  If they do, then we can help in sorting out what
 is going differently in your recompiled binaries.
 
@@ -700,37 +705,42 @@ toward a more consolidated setup.
 
 The relevant code and documentation is available from the following
 repositories, but please check for newer versions of this document at
-@url{http://www.ohwr.org/projects/pfc-sw/files/} before starting a
+@url{http://www.ohwr.org/projects/spec-sw/files/} before starting a
 rebuild effort.
 
 @itemize @bullet
 
-@item WRPTPD is currently hosted at @url{git://gnudd.com/ptp-noposix.git}
+@item WRPTPD is currently hosted at @url{git://gnudd.com/ptp-noposix.git}.
 
 @item The software for the switch
-is at @url{git://ohwr.org/white-rabbit/wr-switch-sw.git} (refers to
-WRPTPD during compilation)
+is at @url{git://ohwr.org/white-rabbit/wr-switch-sw.git}. The package refers to
+WRPTPD during compilation; please note that the demo uses the branch
+called @i{ptpx-to-merge} (which isn't really ready to be merged, so it
+isn't part of @i{master} yet).
 
-@item The SD boot temporary solution is at @url{http://twlostow.web.cern.ch/wr/}
+@item The SD boot temporary solution is at
+@url{http://twlostow.web.cern.ch/wr/}.
 
 @item The lm32 code base
-is at @url{git://github.com/twlostow/wr-core-software.git} (refers to
-WRPTPD during compilation)
+is at @url{git://github.com/twlostow/wr-core-software.git}. This refers to
+WRPTPD during compilation (again, branch @i{ptpx-to-merge}. You may want
+to checkout the @i{tom_mods} branch.
 
 @item The Linux driver is at @url{git://github.com/a-rubini/gnurabbit.git}
+as well as my own @url{git://gnudd.com/gnurabbit.git}.
 
 @item The source for this documentation is at
 @url{git://github.com/a-rubini/spec-demo.git}; a precompiled PDF is
-released in the @i{files} section of the OHWR project
+released in the @i{files} section of the OHWR project.
 
 @item The hardware and gateware for the switch is
-under SVN at @url{http://svn.ohwr.org/white-rabbit}
+under SVN at @url{http://svn.ohwr.org/white-rabbit}.
 
 @item The hardware and gateware for the SPEC is under git at
-@url{git://ohwr.org/hdl-core-lib/wr-cores.git}
+@url{git://ohwr.org/hdl-core-lib/wr-cores.git}.
 
 @item Documentation about the SPEC is
-under SVN at @url{http://svn.ohwr.org/spec}
+under SVN at @url{http://svn.ohwr.org/spec}.
 
 @end itemize
 
