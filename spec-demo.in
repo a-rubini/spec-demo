@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month July 2011
+@set update-month September 2011
 
 @finalout
 
@@ -47,6 +47,10 @@
 
 @end titlepage
 @headings single
+
+@iftex
+@contents
+@end iftex
 
 @c ##########################################################################
 @node Top, Description of the Package, (dir), (dir)
@@ -746,10 +750,6 @@ particular, the White Rabbit Switch.
 
 
 @c ##########################################################################
-@iftex
-@contents
-@end iftex
-
 @bye
 
 
