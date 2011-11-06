@@ -35,7 +35,7 @@
 
 @setchapternewpage off
 
-@set update-month September 2011
+@set update-month November 2011
 
 @finalout
 
@@ -73,7 +73,8 @@ dirty.
 * Demo Results::                
 * Troubleshooting::             
 * Summary of Files Used in the Demo::  
-* Rebuilding from Source files::  
+* Rebuilding from Source Files::  
+* Rebuilding the LM32 compiler::  
 * Acknowledgments::             
 @end menu
 
@@ -743,6 +744,81 @@ under SVN at @url{http://svn.ohwr.org/white-rabbit}.
 under SVN at @url{http://svn.ohwr.org/spec}.
 
 @end itemize
+
+@c ##########################################################################
+@node Rebuilding the LM32 compiler
+@chapter Rebuilding the LM32 compiler
+
+To make an lm32 compiler by yourself you'll need to get the sources of
+all involved pieces and compile them all.  You can use the script
+"build-gcc4" part of this package in the @i{gcc} subdirectory. I call
+it like this:
+
+@example
+      ./build-gcc4 config-lm32-4.5.3
+@end example
+
+The config file is especially easy to read, it merely lists packages,
+their download place and options used in compiling.  Please note that
+you must ensure to have write support in the installation directory
+(the @code{--prefix} one). My own @code{/opt} is writable by me; if your
+isn't writable you can use one of the following commands, the one that
+best suits your and your computer:
+
+@example
+   sudo chmod 777 /opt
+   sudo chown $USER /opt
+   sudo mkdir -m 777 /opt/lm32-gcc-4.5.3
+   sudo mkdir /opt/lm32-gcc-4.5.3; sudo chown $USER /opt/lm32-gcc-4.5.3
+@end example
+
+We are compiling gcc-4.5 and not gcc-4.6 because version 4.6 has a bug
+related to @i{lm32}. Version 4.6 simply segfaults when building target
+libraries with the @i{xgcc} first-stage compiler. The bug has been
+reported.
+
+The run for @i{gcc-4.5.3} will take between 5 minutes and 30 minutes,
+according to the speed of your computer, plus the download time (if
+you run it several times, it will download only during the first run).
+The script builds in a new directory each time (I need it to track
+changes in my script and config file), named according the the time
+you start the build.
+
+The files you'll find at the end of the process are the following 
+ones:
+
+@table @code
+@item ./downloads
+      Files retrieved from the network: 120MB of stuff, more or less.
+@item ./src
+      Uncompressed downloaded materia: 1GB.
+@item ./build-111106-00-59
+      Build directory, named based on the minute: 0.5GB.
+@item ./build-111106-00-59.log
+      Log file for the specific build: 7MB
+@item /opt/lm32-gcc-4.5.3
+      Installed compiler with documentation and everything: 120MB
+@end table
+
+The resulting compiler is able to compile the prototype for this
+package but not the normal SPEC runtime, because our current sources
+of @i{ptp} include @code{<stdio.h>} and other files that in this
+version of @i{newlib} trigger compilation errors.  I couldn't find the
+version of @i{newlib} that other pre-build lm32 toolchains use, as the
+official @code{newlib-1.13.0} has no support for lm32.  I chose to
+remain with the new official package because we must aim at
+portability and the new @i{ptp} should not use @code{<stdio.h>} or
+other lib-dependent headers in its core files.
+
+Although my own computers are serious old-fashioned developer
+machines, I'm aware most modern distributions are user-friendly and
+developer-unfriendly.  Thus, I tried running my script on a few
+unadorned installations, to catch possible issues.
+
+The test was run successfully on Debian-6, Ubuntu-10.04 (LTS),
+Fedora-12. On all system I installed @i{gcc} and @i{make} in order to
+be able to compile and simply run "@code{./build-gcc4 config-lm32-4.5.3}."
+
 
 @c ##########################################################################
 @node Acknowledgments,  , Rebuilding from Source files, Top
